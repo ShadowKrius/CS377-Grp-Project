@@ -11,9 +11,6 @@ struct Process {
   int duration;
   int completion;
   // newly added
-  int first_run;
-  int duration;
-  int completion;
   int vruntime;        // For CFS
   int weight;          // For CFS (derived from nice value)
 

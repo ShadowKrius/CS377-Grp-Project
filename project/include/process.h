@@ -1,10 +1,14 @@
+#ifndef PROCESS_H
+#define PROCESS_H
+
 #include <list>
 #include <queue>
 #include <string>
+#include <vector>
 
 using namespace std;
 
-typedef struct Process Process;
+// Process structure
 struct Process {
   int pid;
   int arrival;
@@ -20,6 +24,7 @@ struct Process {
   float io_ratio;      // Percentage of time spent on I/O (0.0-1.0)
 };
 
+// Comparator for arrival time priority queue
 class ArrivalComparator {
  public:
   bool operator()(const Process lhs, const Process rhs) const {
@@ -30,23 +35,23 @@ class ArrivalComparator {
   }
 };
 
-typedef priority_queue<Process, vector<Process>, ArrivalComparator>
-    pqueue_arrival;
+// Comparator for duration time priority queue
+class DurationComparator {
+ public:
+  bool operator()(const Process lhs, const Process rhs) const {
+    if (lhs.duration != rhs.duration)
+      return lhs.duration > rhs.duration;
+    else
+      return lhs.arrival > rhs.arrival;
+  }
+};
 
-pqueue_arrival read_workload(string filename);
-void show_workload(pqueue_arrival workload);
-void show_processes(list<Process> processes);
+typedef priority_queue<Process, vector<Process>, ArrivalComparator> pqueue_arrival;
+typedef priority_queue<Process, vector<Process>, DurationComparator> pqueue_duration;
 
-list<Process> stcf(pqueue_arrival workload);
-list<Process> rr(pqueue_arrival workload);
+// Constants
+const int TARGET_LATENCY = 20;      // Needed for dynamic time slice calculation
+const int MIN_GRANULARITY = 3;      // Minimum time slice
+const int NICE_0_WEIGHT = 1024;     // Standard weight for nice value 0
 
-float avg_turnaround(list<Process> processes);
-float avg_response(list<Process> processes);
-void show_metrics(list<Process> processes);
-
-#ifdef DEBUGMODE
-#define debug(msg) \
-    std::cout <<"[" << __FILE__ << ":" << __LINE__ << "] " << msg << std::endl;
-#else
-#define debug(msg)
-#endif
+#endif // PROCESS_H

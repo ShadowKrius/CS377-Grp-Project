@@ -26,13 +26,11 @@ list<Process> cfs(pqueue_arrival workload) {
       Process new_proc = workload.top();
       workload.pop();
       
-      // first processes have vruntime of 0. consequent processes have base vruntime according to the most recent minimum vruntime.
+      // First processes have vruntime of 0. Consequent processes have base vruntime according to the most recent minimum vruntime.
       if(num_runnable == 0) {
         new_proc.vruntime = 0;
       } else {
-        // Alternative without getMinVRuntime: maintain a separate min_vruntime variable
-        // or just set newcomers to 0 (slightly less fair but simpler)
-        new_proc.vruntime = min_vruntime; // Or some other initialization strategy
+        new_proc.vruntime = min_vruntime;
       }
       
       rb_tree.insert(new_proc);
@@ -46,12 +44,18 @@ list<Process> cfs(pqueue_arrival workload) {
     }
     
     // Calculate time slice based on number of runnable processes
-    int time_slice = max(TARGET_LATENCY / num_runnable, MIN_GRANULARITY);
+    int time_slice = max(TARGET_LATENCY / max(1, num_runnable), MIN_GRANULARITY);
+    
+    // Skip if no runnable processes
+    if (num_runnable == 0) {
+      continue;
+    }
     
     // Select process with minimum vruntime
     Process cur_proc = rb_tree.findMin();
     rb_tree.remove(cur_proc.pid);
     num_runnable--;  // Decrement counter on removal
+    min_vruntime = cur_proc.vruntime;  // Update min_vruntime
     
     // Record first run time if needed
     if(cur_proc.first_run == -1) {
@@ -75,19 +79,4 @@ list<Process> cfs(pqueue_arrival workload) {
     }
   }
   return completed;
-}
-
-// Update vruntime
-void updateVRuntime(Process& process, int time_slice) {
-  float effective_slice = time_slice;
-  
-  // If this is an I/O-bound process, apply a scaling factor to simulate I/O benefit
-  if (process.is_io_bound) {
-      // Simulate I/O operations by reducing the vruntime increment
-      // The higher the io_ratio, the smaller the vruntime increment
-      float io_bonus_factor = 0.7;  // Configurable parameter
-      effective_slice = time_slice * (1.0 - (process.io_ratio * io_bonus_factor));
-  }
-  
-  process.vruntime += (effective_slice * NICE_0_WEIGHT) / process.weight;
 }

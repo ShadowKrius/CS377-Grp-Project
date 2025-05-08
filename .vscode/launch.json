@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "lldb",
+      "request": "launch",
+      "args": [],
+      "cwd": "/Users/adhir/Desktop/cs377_final_project/CS377-Grp-Project/project/src",
+      "program": "/Users/adhir/Desktop/cs377_final_project/CS377-Grp-Project/project/src/build/Debug/outDebug"
+    }
+  ]
+}

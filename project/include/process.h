@@ -1,10 +1,14 @@
+#ifndef PROCESS_H
+#define PROCESS_H
+
 #include <list>
 #include <queue>
 #include <string>
+#include <vector>
 
 using namespace std;
 
-typedef struct Process Process;
+// Process structure
 struct Process {
   int pid;
   int arrival;
@@ -20,6 +24,7 @@ struct Process {
   float io_ratio;      // Percentage of time spent on I/O (0.0-1.0)
 };
 
+// Comparator for arrival time priority queue
 class ArrivalComparator {
  public:
   bool operator()(const Process lhs, const Process rhs) const {

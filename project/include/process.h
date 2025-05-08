@@ -37,15 +37,6 @@ pqueue_arrival read_workload(string filename);
 void show_workload(pqueue_arrival workload);
 void show_processes(list<Process> processes);
 
-list<Process> stcf(pqueue_arrival workload);
-list<Process> rr(pqueue_arrival workload);
-
-float avg_turnaround(list<Process> processes);
-float avg_response(list<Process> processes);
-void show_metrics(list<Process> processes);
-float fairness_index(list<Process> processes);
-float throughput(list<Process> processes, int total_time);
-
 #ifdef DEBUGMODE
 #define debug(msg) \
     std::cout <<"[" << __FILE__ << ":" << __LINE__ << "] " << msg << std::endl;

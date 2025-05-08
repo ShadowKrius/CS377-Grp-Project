@@ -1,10 +1,6 @@
-#include <rb_tree.h>
-#include <process.h>
-#include <schedulers.h>
-
-const int TARGET_LATENCY = 20;      // Needed for dynamic time slice calculation
-const int MIN_GRANULARITY = 3;      // Minimum time slice
-const int NICE_0_WEIGHT = 1024;     // Standard weight for nice value 0
+#include "rb_tree.h"
+#include "process.h"
+#include "schedulers.h"
 
 list<Process> cfs(pqueue_arrival workload) {
   list<Process> completed;

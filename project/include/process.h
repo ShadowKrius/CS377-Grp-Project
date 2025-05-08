@@ -42,9 +42,16 @@ pqueue_arrival read_workload(string filename);
 void show_workload(pqueue_arrival workload);
 void show_processes(list<Process> processes);
 
+const int TARGET_LATENCY = 20;      // Needed for dynamic time slice calculation
+const int MIN_GRANULARITY = 3;      // Minimum time slice
+const int NICE_0_WEIGHT = 1024;     // Standard weight for nice value 0
+
+#endif
+
 #ifdef DEBUGMODE
 #define debug(msg) \
     std::cout <<"[" << __FILE__ << ":" << __LINE__ << "] " << msg << std::endl;
 #else
 #define debug(msg)
 #endif
+

@@ -1,121 +1,149 @@
 #include "simulation.h"
+#include "metrics.h"
+#include "process.h"
 #include <iostream>
 #include <fstream>
+#include <string>
 #include <sstream>
 #include <map>
-#include <string>
+#include <list>
+#include <queue>
+#include <iomanip>
+#include <vector>
+#include <utility>
+#include <algorithm>
+#include <climits>
+#include <cmath>
 
 using namespace std;
+
+const int nice_to_weight[40] = {
+  /* -20 */ 88761, 71755, 56483, 46273, 36291,
+  /* -15 */ 29154, 23254, 18705, 14949, 11916,
+  /* -10 */ 9548, 7620, 6100, 4904, 3906,
+  /*  -5 */ 3121, 2501, 1991, 1586, 1277,
+  /*   0 */ 1024, 820, 655, 526, 423,
+  /*   5 */ 335, 272, 215, 172, 137,
+  /*  10 */ 110, 87, 70, 56, 45,
+  /*  15 */ 36, 29, 23, 18, 15,
+};
 
 // Read workload from file
 pqueue_arrival read_workload(string filename) {
   pqueue_arrival workload;
-  static int pid_counter = 0; // For assigning unique PIDs
+  int next_pid = 1;
+  int NICE_0_WEIGHT = 1024;
+
+  ifstream file(filename);
+  if(!file.is_open()){
+    cerr << "Error: Unable to open file" << filename << endl;
+    return workload;
+  }
+
+  string file_contents;
+  string line;
+  while(getline(file, line)){
+    file_contents += line + "\n";
+  }
+  file.close();
+
+  istringstream iss(file_contents);
+  int arrival, duration, nice_value, is_io_bound;
+  float io_ratio;
+
   
-  try {
-    ifstream file(filename);
-    if (file.is_open()) {
-      int arrival, duration;
-      int nice_value = 0; // Default nice value
-      
-      // Check if file is empty
-      if (file.peek() == ifstream::traits_type::eof()) {
-        file.close();
-        return workload;  // Return empty workload for empty file
-      }
-      
-      string line;
-      while (getline(file, line)) {
-        // Skip empty lines or comment lines
-        if (line.empty() || line[0] == '#') continue;
-        
-        istringstream iss(line);
-        if (iss >> arrival >> duration) {
-          // Optional nice value (if present in file)
-          if (!(iss >> nice_value)) {
-            nice_value = 0; // Default if not specified
-          }
-          
-          // Create a new process
-          Process p;
-          p.pid = pid_counter++;
-          p.arrival = arrival;
-          p.duration = duration;
-          p.first_run = -1;  // Not yet run
-          p.completion = -1; // Not yet completed
-          
-          // CFS parameters
-          p.nice_value = nice_value;
-          p.vruntime = 0;  // Will be properly initialized in CFS scheduler
-          
-          // Set weight based on nice value
-          // Formula: weight = 1024 / (1.25^nice_value)
-          if (nice_value == 0) {
-            p.weight = NICE_0_WEIGHT;
-          } else if (nice_value > 0) {
-            // Lower weight for lower priority
-            p.weight = NICE_0_WEIGHT >> (nice_value / 5);
-          } else {
-            // Higher weight for higher priority
-            p.weight = NICE_0_WEIGHT << ((-nice_value) / 5);
-          }
-          
-          // Default I/O behavior - can be modified for Test #4
-          p.is_io_bound = false;
-          p.io_ratio = 0.0;
-          
-          workload.push(p);
-        }
-      }
-      file.close();
-    } else {
-      cerr << "Warning: Could not open file " << filename << endl;
-      // Return empty workload
+  while(iss >> arrival >> duration >> nice_value >> is_io_bound >> io_ratio) {
+    Process p;
+    p.pid = next_pid++;
+    p.arrival = arrival;
+    p.duration = duration;
+    p.first_run = -1;
+    p.completion = -1;
+    p.vruntime = 0;
+    p.nice_value = nice_value;
+    p.is_io_bound = is_io_bound;
+    p.io_ratio = io_ratio;
+
+    // int temp_nice_value = p.nice_value;
+    // if(temp_nice_value < -20){
+    //   temp_nice_value = -20;
+    // }
+    // if(temp_nice_value > 19){
+    //   temp_nice_value = 19;
+    // }
+    // p.weight = NICE_0_WEIGHT/pow(1.25,temp_nice_value);
+
+    // Considered the above approach, but could be a big efficiency suck as computing the power of tens of processes may slow processor. Settled on adding a matrix containing all pre-computed nice values.
+
+    // Ensure index is within bounds
+    int index = p.nice_value + 20; 
+    if (index < 0) {
+        index = 0;
+    } else if (index >= 40) {
+        index = 39;
     }
-  } catch (const exception& e) {
-    cerr << "Error reading workload: " << e.what() << endl;
-    // Return empty workload on exception
+    
+    p.weight = nice_to_weight[index];
+
+    workload.push(p);
   }
   
   return workload;
 }
 
-// Show workload contents
+void initializeWeight(Process& p) {
+  // Convert nice value to index
+  int index = p.nice_value + 20;
+  
+  // Ensure index is within bounds
+  if (index < 0) {
+      index = 0;
+  } else if (index >= 40) {
+      index = 39;
+  }
+  
+  // Assign weight from lookup table
+  p.weight = nice_to_weight[index];
+}
+
 void show_workload(pqueue_arrival workload) {
   pqueue_arrival xs = workload;
   cout << "Workload:" << endl;
+  cout << "PID\tArrival\tDuration\tNice\tIO Bound\tIO Ratio" << endl;
+  cout << "-----------------------------------------------------" << endl;
   while (!xs.empty()) {
     Process p = xs.top();
-    cout << '\t' << "PID: " << p.pid 
-         << ", Arrival: " << p.arrival 
-         << ", Duration: " << p.duration;
-    
-    if (p.nice_value != 0) {
-      cout << ", Nice: " << p.nice_value;
-    }
-    
-    cout << endl;
+    cout << p.pid << "\t" 
+         << p.arrival << "\t" 
+         << p.duration << "\t\t" 
+         << p.nice_value << "\t" 
+         << (p.is_io_bound ? "Yes" : "No") << "\t\t" 
+         << fixed << setprecision(2) << p.io_ratio << endl;
     xs.pop();
   }
 }
 
-// Show completed processes
 void show_processes(list<Process> processes) {
   list<Process> xs = processes;
   cout << "Processes:" << endl;
+  cout << "PID\tArr\tDur\tNice\tWeight\tVruntime\tIO\tFirst\tCompl\tTAT\tResp" << endl;
+  cout << "--------------------------------------------------------------------------------" << endl;
   while (!xs.empty()) {
     Process p = xs.front();
-    cout << "\tPID: " << p.pid
-         << ", Arrival: " << p.arrival 
-         << ", Duration: " << p.duration
-         << ", First Run: " << p.first_run 
-         << ", Completion: " << p.completion;
+    int turnaround = p.completion - p.arrival;
+    int response = p.first_run - p.arrival;
     
-    if (p.nice_value != 0) {
-      cout << ", Nice: " << p.nice_value;
-    }
-    
-    cout << endl;
+    cout << p.pid << "\t" 
+         << p.arrival << "\t" 
+         << p.duration << "\t" 
+         << p.nice_value << "\t" 
+         << p.weight << "\t" 
+         << p.vruntime << "\t\t" 
+         << fixed << setprecision(1) << p.io_ratio << "\t" 
+         << p.first_run << "\t" 
+         << p.completion << "\t" 
+         << turnaround << "\t" 
+         << response << endl;
     xs.pop_front();
   }
 }

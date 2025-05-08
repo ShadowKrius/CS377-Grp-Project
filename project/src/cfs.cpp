@@ -1,6 +1,5 @@
 #include <rb_tree.h>
 #include <process.h>
-#include <metrics.h>
 #include <schedulers.h>
 
 const int TARGET_LATENCY = 20;      // Needed for dynamic time slice calculation

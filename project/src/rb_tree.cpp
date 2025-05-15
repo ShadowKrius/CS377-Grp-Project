@@ -1,4 +1,3 @@
-
 #include "rb_tree.h"
 #include <iostream>
 #include <iomanip>
@@ -156,19 +155,18 @@ Process RBTree::findMin() {
 }
 
 RBNode* RBTree::search(int pid) {
-    RBNode* current = root;
+    return searchHelper(root, pid);
+}
+
+RBNode* RBTree::searchHelper(RBNode* node, int pid) {
+    if (node == nil) return nil;
     
-    while (current != nil) {
-        if (pid == current->process.pid) {
-            return current;
-        } else if (pid < current->process.pid) {
-            current = current->left;
-        } else {
-            current = current->right;
-        }
-    }
+    if (node->process.pid == pid) return node;
     
-    return nil;
+    RBNode* leftResult = searchHelper(node->left, pid);
+    if (leftResult != nil) return leftResult;
+    
+    return searchHelper(node->right, pid);
 }
 
 void RBTree::transplant(RBNode* u, RBNode* v) {

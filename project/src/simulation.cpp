@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <climits>
 #include <cmath>
+#include <random>
 
 using namespace std;
 
@@ -202,16 +203,23 @@ void Simulation::generateTestWorkload(int test_case) {
                 p.duration = 15;
                 p.first_run = -1;
                 p.completion = -1;
-                p.nice_value = (i % 5) - 2; // Nice values from -2 to 2
+                // Generate random nice value between -20 and 19
+                random_device rd;
+                mt19937 gen(rd());
+                uniform_int_distribution<int> distribution(-20, 19);
+                p.nice_value = distribution(gen);
                 
-                // Set weight based on nice value
-                if (p.nice_value == 0) {
-                    p.weight = NICE_0_WEIGHT;
-                } else if (p.nice_value > 0) {
-                    p.weight = NICE_0_WEIGHT >> (p.nice_value / 5);
-                } else {
-                    p.weight = NICE_0_WEIGHT << ((-p.nice_value) / 5);
+                // Set weight based on nice value table
+                
+                // Ensure index is within bounds
+                int index = p.nice_value + 20; 
+                if (index < 0) {
+                    index = 0;
+                } else if (index >= 40) {
+                    index = 39;
                 }
+                
+                p.weight = nice_to_weight[index];
                 
                 p.is_io_bound = false;
                 p.io_ratio = 0.0;

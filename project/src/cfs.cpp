@@ -2,7 +2,21 @@
 #include "process.h"
 #include "schedulers.h"
 
-
+// When updating vruntime for a process after it runs
+void updateVRuntime(Process& process, int time_slice) {
+    float effective_slice = time_slice;
+    
+    // If this is an I/O-bound process, apply a scaling factor to simulate I/O benefit
+    if (process.is_io_bound) {
+        // Simulate I/O operations by reducing the vruntime increment
+        // The higher the io_ratio, the smaller the vruntime increment
+        float io_bonus_factor = 0.7;  // Configurable parameter
+        effective_slice = time_slice * (1.0 - (process.io_ratio * io_bonus_factor));
+    }
+    
+    // Calculate vruntime using the effective time slice
+    process.vruntime += (effective_slice * NICE_0_WEIGHT) / process.weight;
+}
 
 list<Process> cfs(pqueue_arrival workload) {
   list<Process> completed;
@@ -78,3 +92,4 @@ list<Process> cfs(pqueue_arrival workload) {
   }
   return completed;
 }
+

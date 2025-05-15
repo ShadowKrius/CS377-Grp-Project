@@ -24,6 +24,16 @@ struct Process {
   float io_ratio;      // Percentage of time spent on I/O (0.0-1.0)
 };
 
+class DurationComparator {
+ public:
+  bool operator()(const Process lhs, const Process rhs) const {
+    if (lhs.duration != rhs.duration)
+      return lhs.duration > rhs.duration;
+    else
+      return lhs.arrival > rhs.arrival;
+  }
+};
+
 // Comparator for arrival time priority queue
 class ArrivalComparator {
  public:
@@ -37,6 +47,8 @@ class ArrivalComparator {
 
 typedef priority_queue<Process, vector<Process>, ArrivalComparator>
     pqueue_arrival;
+typedef priority_queue<Process, vector<Process>, DurationComparator>
+    pqueue_duration;
 
 pqueue_arrival read_workload(string filename);
 void show_workload(pqueue_arrival workload);

@@ -52,6 +52,7 @@ public:
     Process findMin();  // Leftmost node (smallest vruntime)
     bool remove(int pid);  // Remove process by pid
     RBNode* search(int pid);  // Find node by pid
+    RBNode* searchHelper(RBNode* node, int pid);
     
     // Tree properties
     bool isEmpty();

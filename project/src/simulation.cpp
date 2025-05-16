@@ -29,6 +29,21 @@ const int nice_to_weight[40] = {
   /*  15 */ 36, 29, 23, 18, 15,
 };
 
+void initializeWeight(Process& p) {
+  // Convert nice value to index
+  int index = p.nice_value + 20;
+  
+  // Ensure index is within bounds
+  if (index < 0) {
+      index = 0;
+  } else if (index >= 40) {
+      index = 39;
+  }
+  
+  // Assign weight from lookup table
+  p.weight = nice_to_weight[index];
+}
+
 // Read workload from file
 pqueue_arrival read_workload(string filename) {
   pqueue_arrival workload;
@@ -92,38 +107,31 @@ pqueue_arrival read_workload(string filename) {
   return workload;
 }
 
-void initializeWeight(Process& p) {
-  // Convert nice value to index
-  int index = p.nice_value + 20;
-  
-  // Ensure index is within bounds
-  if (index < 0) {
-      index = 0;
-  } else if (index >= 40) {
-      index = 39;
-  }
-  
-  // Assign weight from lookup table
-  p.weight = nice_to_weight[index];
+// Loads custom file/test case
+bool Simulation::loadProcesses(string filename) {
+    workload = read_workload(filename);
+    return !workload.empty();
 }
 
-void show_workload(pqueue_arrival workload) {
-  pqueue_arrival xs = workload;
-  cout << "Workload:" << endl;
-  cout << "PID\tArrival\tDuration\tNice\tIO Bound\tIO Ratio" << endl;
-  cout << "-----------------------------------------------------" << endl;
-  while (!xs.empty()) {
-    Process p = xs.top();
-    cout << p.pid << "\t" 
-         << p.arrival << "\t" 
-         << p.duration << "\t\t" 
-         << p.nice_value << "\t" 
-         << (p.is_io_bound ? "Yes" : "No") << "\t\t" 
-         << fixed << setprecision(2) << p.io_ratio << endl;
-    xs.pop();
-  }
+// Runs scheduler
+list<Process> Simulation::runScheduler(string scheduler_type) {
+    pqueue_arrival workload_copy = workload;
+    
+    if (scheduler_type == "stcf") {
+        return stcf(workload_copy);
+    } else if (scheduler_type == "rr") {
+        return rr(workload_copy);
+    } else if (scheduler_type == "cfs") {
+        return cfs(workload_copy);
+    } else {
+        cout << "Invalid scheduler type: " << scheduler_type << endl;
+        return list<Process>();
+    }
 }
 
+
+
+// Displays list of processes used in test case
 void show_processes(list<Process> processes) {
   list<Process> xs = processes;
   cout << "Processes:" << endl;
@@ -149,149 +157,21 @@ void show_processes(list<Process> processes) {
   }
 }
 
-// Simulation class implementation
-bool Simulation::loadProcesses(string filename) {
-    workload = read_workload(filename);
-    return !workload.empty();
-}
-
-void Simulation::generateTestWorkload(int test_case) {
-    // Clear existing workload
-    while (!workload.empty()) {
-        workload.pop();
-    }
-    
-    // Generate processes based on test case
-    switch (test_case) {
-        case 1: // Basic Competency: CPU-bound processes with equal priority
-            for (int i = 0; i < 10; i++) {
-                Process p;
-                p.pid = i;
-                p.arrival = i * 5; // Staggered arrivals
-                p.duration = 20;
-                p.first_run = -1;
-                p.completion = -1;
-                p.nice_value = 0;
-                p.weight = NICE_0_WEIGHT;
-                p.is_io_bound = false;
-                p.io_ratio = 0.0;
-                workload.push(p);
-            }
-            break;
-            
-        case 2: // Dynamic Workload: Processes that join and leave frequently
-            for (int i = 0; i < 20; i++) {
-                Process p;
-                p.pid = i;
-                p.arrival = i * 2; // Frequent arrivals
-                p.duration = 5 + (i % 10); // Varied durations
-                p.first_run = -1;
-                p.completion = -1;
-                p.nice_value = 0;
-                p.weight = NICE_0_WEIGHT;
-                p.is_io_bound = false;
-                p.io_ratio = 0.0;
-                workload.push(p);
-            }
-            break;
-            
-        case 3: // Priority-based scheduling: Processes with different nice values
-            for (int i = 0; i < 10; i++) {
-                Process p;
-                p.pid = i;
-                p.arrival = i * 3;
-                p.duration = 15;
-                p.first_run = -1;
-                p.completion = -1;
-                // Generate random nice value between -20 and 19
-                random_device rd;
-                mt19937 gen(rd());
-                uniform_int_distribution<int> distribution(-20, 19);
-                p.nice_value = distribution(gen);
-                
-                // Set weight based on nice value table
-                
-                // Ensure index is within bounds
-                int index = p.nice_value + 20; 
-                if (index < 0) {
-                    index = 0;
-                } else if (index >= 40) {
-                    index = 39;
-                }
-                
-                p.weight = nice_to_weight[index];
-                
-                p.is_io_bound = false;
-                p.io_ratio = 0.0;
-                workload.push(p);
-            }
-            break;
-            
-        case 4: // Mixed I/O and CPU-bound processes
-            for (int i = 0; i < 10; i++) {
-                Process p;
-                p.pid = i;
-                p.arrival = i * 4;
-                p.duration = 20;
-                p.first_run = -1;
-                p.completion = -1;
-                p.nice_value = 0;
-                p.weight = NICE_0_WEIGHT;
-                
-                // Alternate between CPU-bound and I/O-bound processes
-                p.is_io_bound = (i % 2 == 0);
-                p.io_ratio = p.is_io_bound ? 0.7 : 0.0;
-                
-                workload.push(p);
-            }
-            break;
-            
-        default:
-            // Default to a simple workload
-            for (int i = 0; i < 5; i++) {
-                Process p;
-                p.pid = i;
-                p.arrival = i * 10;
-                p.duration = 10;
-                p.first_run = -1;
-                p.completion = -1;
-                p.nice_value = 0;
-                p.weight = NICE_0_WEIGHT;
-                p.is_io_bound = false;
-                p.io_ratio = 0.0;
-                workload.push(p);
-            }
-    }
-}
-
-list<Process> Simulation::runScheduler(string scheduler_type) {
-    pqueue_arrival workload_copy = workload; // Make a copy to preserve original
-    
-    if (scheduler_type == "stcf") {
-        return stcf(workload_copy);
-    } else if (scheduler_type == "rr") {
-        return rr(workload_copy);
-    } else if (scheduler_type == "cfs") {
-        return cfs(workload_copy);
-    } else {
-        cout << "Invalid scheduler type: " << scheduler_type << endl;
-        return list<Process>();
-    }
-}
-
+// Displays the metrics of scheduler performance
 void Simulation::compareSchedulers() {
     // Run each scheduler
     results["STCF"] = runScheduler("stcf");
     results["RR"] = runScheduler("rr");
     results["CFS"] = runScheduler("cfs");
     
-    // Print results
     cout << "\n=== Scheduler Comparison ===\n";
     
     for (auto const& [name, processes] : results) {
         cout << "\n" << name << " Scheduler:\n";
         
-        // Calculate metrics
+        // Show completion order
+        show_completion_order(processes);
+        
         float turnaround = avg_turnaround(processes);
         float response = avg_response(processes);
         float fairness = fairness_index(processes);
@@ -304,24 +184,7 @@ void Simulation::compareSchedulers() {
     cout << "\n=== End of Comparison ===\n";
 }
 
-void Simulation::printResults(string scheduler_type) {
-    list<Process> completed = runScheduler(scheduler_type);
-    
-    cout << "\n=== " << scheduler_type << " Scheduler Results ===\n";
-    show_processes(completed);
-    
-    // Calculate metrics
-    float turnaround = avg_turnaround(completed);
-    float response = avg_response(completed);
-    float fairness = fairness_index(completed);
-    
-    cout << "Average Turnaround Time: " << turnaround << endl;
-    cout << "Average Response Time: " << response << endl;
-    cout << "Fairness Index: " << fairness << endl;
-    
-    cout << "=== End of Results ===\n";
-}
-
+// Displays the workload for a given test
 void Simulation::displayWorkload() {
     pqueue_arrival workload_copy = workload;
     cout << "Current Workload:" << endl;
@@ -343,4 +206,41 @@ void Simulation::displayWorkload() {
         cout << endl;
         workload_copy.pop();
     }
+}
+
+// Displays the order in which processes are completed by each scheduler
+void Simulation::show_completion_order(list<Process> processes) {
+    vector<Process> sorted_processes(processes.begin(), processes.end());
+    
+    sort(sorted_processes.begin(), sorted_processes.end(), 
+         [](const Process& a, const Process& b) {
+             return a.completion < b.completion;
+         });
+    
+    cout << "\nProcess Completion Order:" << endl;
+    cout << "-------------------------------------------------------------------------" << endl;
+    cout << "Order | PID | Completion | Nice | Priority | I/O Bound | Duration | First Run" << endl;
+    cout << "-------------------------------------------------------------------------" << endl;
+    
+    int order = 1;
+    for (const Process& p : sorted_processes) {
+        string priority;
+        if (p.nice_value <= -10) priority = "High+++";
+        else if (p.nice_value <= -5) priority = "High+";
+        else if (p.nice_value < 0) priority = "High";
+        else if (p.nice_value == 0) priority = "Normal";
+        else if (p.nice_value <= 5) priority = "Low";
+        else if (p.nice_value <= 10) priority = "Low+";
+        else priority = "Low+++";
+        
+        cout << setw(5) << order++ << " | " 
+             << setw(3) << p.pid << " | "
+             << setw(10) << p.completion << " | "
+             << setw(4) << p.nice_value << " | "
+             << setw(8) << priority << " | "
+             << setw(8) << (p.is_io_bound ? "Yes" : "No") << " | "
+             << setw(8) << p.duration << " | "
+             << setw(9) << p.first_run << endl;
+    }
+    cout << "-------------------------------------------------------------------------" << endl;
 }

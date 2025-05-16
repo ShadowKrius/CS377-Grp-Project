@@ -25,11 +25,11 @@ public:
     // Run all schedulers for comparison
     void compareSchedulers();
     
-    // Print detailed results for a specific scheduler
-    void printResults(string scheduler_type);
-    
-    // Display the current workload
+    // Displays the current workload
     void displayWorkload();
+
+    // Displays process completion order of scheduler
+    void show_completion_order(list<Process> processes);
 };
 
 #endif // SIMULATION_H
